@@ -31,13 +31,13 @@ for w in words:
 # plt.figure(figsize=(16,16))
 # plt.imshow(N, cmap='Blues')
 
-for i in range(27):
-    for j in range(27):
-        chsrt = itos[i] + itos[j]
-        plt.text(j,i,chsrt, ha="center", va="bottom", color="gray")
-        plt.text(j, i, N[i, j].item(), ha="center", va="top", color="gray")
-plt.axis("off")
-plt.show()
+# for i in range(27):
+#     for j in range(27):
+#         chsrt = itos[i] + itos[j]
+#         plt.text(j,i,chsrt, ha="center", va="bottom", color="gray")
+#         plt.text(j, i, N[i, j].item(), ha="center", va="top", color="gray")
+# plt.axis("off")
+
 
 
 # roughly speaking we gonna use the probabilities from this model (two-dimensional array) to start sampling from the model
@@ -60,26 +60,56 @@ and very few is 2
 
 # create a matrix with probs which are normalized
 
-P = N.float()
-P = P / P.sum(1, keepdim=True) # we can divide like this because of broadcast semantics in torch
+P = (N+1).float()
+P /= P.sum(1, keepdims=True) # we can divide like this because of broadcast semantics in torch
 
 g = torch.Generator().manual_seed(2147483647)
 
-for i in range(10):
+for i in range(5):
     out = []
     ix = 0
     while True:
         p = P[ix]
-        # p = N[ix].float()
-        # p = p / p.sum() # create probabilty distribution by dividing it by p.sum in another words we normalize it
-
+    
         ix = torch.multinomial(p, num_samples=1, replacement=True, generator=g).item() # helps us to choose a char based on it's probability from two-dimensional array
         out.append(itos[ix])
         if ix == 0:
             break
 
-    print(''.join(out))
+    #print(''.join(out))
 
 
-# ends in 47:37
+# now we want to evaluate the quality of this model
+# how good examples from the model 
 
+# we gonna use likelihood
+# likelihood - is the product of all of these probs, the product of it should be as high as possible
+ 
+log_likelihood = 0.0
+n = 0
+for w in words:
+    chs = ["."] + list(w) + ["."] 
+ 
+    for ch1, ch2 in zip(chs, chs[1:]):
+        ix1 = stoi[ch1]
+        ix2 = stoi[ch2]
+        p = P[ix1,ix2]
+        logprob = torch.log(p)
+        log_likelihood += logprob
+        n += 1
+
+        #print(f'{ch1}{ch2} : {p:.4f} {logprob:.4f}')
+
+print(f'{log_likelihood=}')
+nll = -log_likelihood
+print(f'{nll=}')
+print(f'{nll/n}') # quality of our model. the lower it is the better of we are and the higher it is the worse off we are
+
+# the job of our training is to find a paramenters that minimize negative log likelihood
+
+# GOAL: maximize likelihood of the data w.r.t. model parameters (statistical modeling)
+# equivalent to maximizing the log likelihood (because log is monotonic)
+# equivalent to minimizing the negative log likelihood
+# equivalent to minimizing the average negative log likelihood
+
+ # ends 1:05:00
